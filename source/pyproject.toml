@@ -1,0 +1,80 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "alembic-migration-linter"
+version = "0.1.0"
+description = "Detect backward incompatible migrations for your Alembic project"
+readme = "README.md"
+license = "MIT"
+authors = ["Alembic Migration Linter Contributors"]
+keywords = [
+    "alembic",
+    "migration",
+    "lint",
+    "linter",
+    "database",
+    "backward",
+    "compatibility",
+    "sqlalchemy",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Framework :: SQLAlchemy",
+    "Framework :: Alembic",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+packages = [{ include = "alembic_migration_linter" }]
+include = [{ path = "alembic_migration_linter/py.typed" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11"
+alembic = ">=1.13"
+sqlalchemy = ">=2.0"
+click = ">=8.0"
+django-migration-linter = ">=5.0"
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+pytest-cov = "*"
+testcontainers = "*"
+psycopg2-binary = "*"
+pymysql = "*"
+
+[tool.poetry.scripts]
+alembic-lint = "alembic_migration_linter.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["alembic_migration_linter"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
