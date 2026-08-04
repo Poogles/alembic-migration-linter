@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import io
 from collections.abc import Callable
 
@@ -48,7 +49,14 @@ class AlembicSqlGenerator:
         )
 
         mc = env_ctx.get_context()
-        with mc.begin_transaction(), Operations.context(mc):
+        # In offline mode, conn.execute() returns None, so calls like
+        # .scalar() or .fetchone() raise AttributeError. Suppress to still
+        # capture any SQL rendered before the failure.
+        with (
+            mc.begin_transaction(),
+            Operations.context(mc),
+            contextlib.suppress(AttributeError),
+        ):
             fn()
 
         sql = output.getvalue().strip()
