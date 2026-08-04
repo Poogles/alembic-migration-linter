@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container: python:3.11
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Run ruff check
+        run: poetry run ruff check alembic_migration_linter/ tests/
+
+      - name: Run ruff format check
+        run: poetry run ruff format --check alembic_migration_linter/ tests/
+
+      - name: Run mypy
+        run: poetry run mypy alembic_migration_linter/
+
+  test:
+    runs-on: ubuntu-latest
+    container: python:${{ matrix.python-version }}
+    defaults:
+      run:
+        working-directory: source
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15-rc"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Run tests
+        run: poetry run pytest tests/ -v
+
+      - name: Run tests with coverage
+        run: poetry run pytest tests/ --cov=alembic_migration_linter --cov-report=term-missing
+        if: matrix.python-version == '3.11'
+
+  build:
+    runs-on: ubuntu-latest
+    container: python:3.11
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Build package
+        run: poetry build
+
+      - name: Check package
+        run: |
+          poetry run pip install twine
+          poetry run twine check dist/*
