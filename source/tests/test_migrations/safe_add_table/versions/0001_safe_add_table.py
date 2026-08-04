@@ -1,8 +1,8 @@
-"""safe add table — expand phase of DROP_TABLE safe pattern
+"""safe add table — expand phase of DROP_TABLE / RENAME_TABLE safe pattern
 
-Instead of dropping an old table directly, create the new table
-alongside it. After deploying code that uses the new table, drop
-the old table in a separate migration.
+Instead of dropping or renaming a table directly, create the new
+table alongside it. After deploying code that uses the new table,
+drop the old table in a separate migration.
 
 Revision ID: safe_add_table
 Revises:

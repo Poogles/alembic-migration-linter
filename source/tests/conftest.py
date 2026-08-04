@@ -104,21 +104,25 @@ ERROR_SCENARIOS: dict[str, tuple[list[str], list[str]]] = {
     "raw_sql": (["DROP_COLUMN"], []),
 }
 
+# Scenario name → (expected_error_codes, expected_warning_codes)
+# New safe scenarios are annotated with the rule they guard against.
 SAFE_SCENARIOS: dict[str, tuple[list[str], list[str]]] = {
     "create_table_with_not_null": ([], []),
     "add_column_with_default": ([], []),
     "drop_not_null": ([], []),
     "create_through_table": ([], []),
-    "add_not_null_then_default": ([], []),
+    "add_not_null_then_default": ([], []),  # NOT_NULL safe pattern
     "add_server_default": ([], []),
     "run_python_no_reverse": ([], []),
     "run_sql_no_reverse": ([], []),
-    "safe_add_table": ([], []),
-    "safe_add_column": ([], []),
-    "safe_add_column_rename": ([], []),
-    "safe_add_column_alter": ([], []),
-    "safe_create_index_concurrently": ([], []),
-    "safe_drop_index_concurrently": ([], []),
+    "safe_add_table": ([], []),  # DROP_TABLE / RENAME_TABLE safe pattern
+    "safe_add_column": ([], []),  # DROP_COLUMN safe pattern
+    "safe_add_column_rename": ([], []),  # RENAME_COLUMN safe pattern
+    "safe_add_column_alter": ([], []),  # ALTER_COLUMN safe pattern
+    "safe_create_index_concurrently": ([], []),  # CREATE_INDEX safe pattern
+    "safe_drop_index_concurrently": ([], []),  # DROP_INDEX safe pattern
+    "safe_create_index_exclusive": ([], []),  # CREATE_INDEX_EXCLUSIVE safe pattern
+    "safe_add_unique_on_new_table": ([], []),  # ADD_UNIQUE safe pattern
 }
 
 WARNING_SCENARIOS: dict[str, tuple[list[str], list[str]]] = {

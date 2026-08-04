@@ -142,9 +142,11 @@ These are modifications to the base rules, not separate codes. If `batch_alter_t
 
 ## Safe Migration Patterns
 
-Each incompatibility rule has a safe alternative. The pattern is expand/contract: first expand the schema without breaking old code, deploy, then contract in a follow-up migration.
+### Expand/Contract (DROP_TABLE, DROP_COLUMN, RENAME_TABLE, RENAME_COLUMN, ALTER_COLUMN)
 
-### DROP_TABLE
+The pattern is expand/contract: first expand the schema without breaking old code, deploy, then contract in a follow-up migration. The expand migration passes the linter; the contract migration will still be flagged because the linter cannot know whether old code has been retired. Use `--ignore-revision` or `--since-revision` to scope linting to the expand phase.
+
+#### DROP_TABLE
 
 Create the replacement table alongside the old one. After deploying code that uses the new table, drop the old table in a separate migration:
 
@@ -157,12 +159,12 @@ def upgrade():
         sa.Column("name", sa.String(255), nullable=False),
     )
 
-# Migration 2 (after code deploy): drop old table
+# Migration 2 (after code deploy): drop old table — still flagged by linter
 def upgrade():
     op.drop_table("users")
 ```
 
-### DROP_COLUMN
+#### DROP_COLUMN
 
 Stop writing to the column in code first. In a later migration, drop it after old code is fully retired:
 
@@ -172,12 +174,12 @@ def upgrade():
     op.add_column("users", sa.Column("full_name", sa.String(255)))
     op.execute("UPDATE users SET full_name = name")
 
-# Migration 2 (after code deploy): drop old column
+# Migration 2 (after code deploy): drop old column — still flagged by linter
 def upgrade():
     op.drop_column("users", "name")
 ```
 
-### RENAME_TABLE
+#### RENAME_TABLE
 
 Create the new table, copy data, switch code, then drop the old table:
 
@@ -189,15 +191,14 @@ def upgrade():
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("sku", sa.String(50), nullable=False),
     )
-    # Copy data from old table
     op.execute("INSERT INTO products (id, sku) SELECT id, sku FROM items")
 
-# Migration 2 (after code deploy): drop old table
+# Migration 2 (after code deploy): drop old table — still flagged by linter
 def upgrade():
     op.drop_table("items")
 ```
 
-### RENAME_COLUMN
+#### RENAME_COLUMN
 
 Add a new column with the desired name, backfill, switch code, then drop the old column:
 
@@ -207,12 +208,12 @@ def upgrade():
     op.add_column("users", sa.Column("name", sa.String(255)))
     op.execute("UPDATE users SET name = title")
 
-# Migration 2 (after code deploy): drop old column
+# Migration 2 (after code deploy): drop old column — still flagged by linter
 def upgrade():
     op.drop_column("users", "title")
 ```
 
-### ALTER_COLUMN
+#### ALTER_COLUMN
 
 Add a new column with the desired type, backfill, switch code, then drop the old column:
 
@@ -222,7 +223,7 @@ def upgrade():
     op.add_column("products", sa.Column("description_long", sa.Text()))
     op.execute("UPDATE products SET description_long = description")
 
-# Migration 2 (after code deploy): drop old column
+# Migration 2 (after code deploy): drop old column — still flagged by linter
 def upgrade():
     op.drop_column("products", "description")
 ```
@@ -244,26 +245,26 @@ def upgrade():
 
 ### ADD_UNIQUE
 
-Ensure no duplicates exist before adding the constraint:
+Adding a unique constraint to an existing table is always flagged because the linter cannot verify that duplicates have been eliminated. The only safe alternative is to add the constraint when creating a new table (no existing rows to violate it):
 
 ```python
-# Migration 1: add non-unique index and deduplicate
 def upgrade():
-    op.create_index("idx_users_email", "users", ["email"])
-    # Run a data migration to deduplicate
-
-# Migration 2: add unique constraint
-def upgrade():
+    op.create_table(
+        "users",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("email", sa.String(255), nullable=False),
+    )
     op.create_unique_constraint("uq_users_email", "users", ["email"])
 ```
 
 ### CREATE_INDEX (PostgreSQL)
 
-Use `CONCURRENTLY` to avoid locking the table during creation:
+Use `CONCURRENTLY` to avoid locking the table during creation. `CONCURRENTLY` cannot run inside a transaction, so wrap it in an autocommit block:
 
 ```python
 def upgrade():
-    op.execute("CREATE INDEX CONCURRENTLY idx_users_email ON users (email)")
+    with op.get_context().autocommit_block():
+        op.execute("CREATE INDEX CONCURRENTLY idx_users_email ON users (email)")
 ```
 
 ### CREATE_INDEX_EXCLUSIVE (PostgreSQL)
@@ -277,7 +278,8 @@ def upgrade():
 
 # Migration 2: create index
 def upgrade():
-    op.execute("CREATE INDEX CONCURRENTLY idx_products_category ON products (category)")
+    with op.get_context().autocommit_block():
+        op.execute("CREATE INDEX CONCURRENTLY idx_products_category ON products (category)")
 ```
 
 ### DROP_INDEX (PostgreSQL)
@@ -286,19 +288,13 @@ Use `CONCURRENTLY` to avoid locking the table during drop:
 
 ```python
 def upgrade():
-    op.execute("DROP INDEX CONCURRENTLY idx_users_email")
+    with op.get_context().autocommit_block():
+        op.execute("DROP INDEX CONCURRENTLY idx_users_email")
 ```
 
 ### REINDEX (PostgreSQL)
 
-Use `REINDEX INDEX CONCURRENTLY` for individual indexes instead of `REINDEX TABLE`:
-
-```python
-def upgrade():
-    op.execute("REINDEX INDEX CONCURRENTLY idx_users_email")
-```
-
-**Note:** The linter cannot distinguish `REINDEX TABLE` from `REINDEX INDEX CONCURRENTLY` — both match the `REINDEX` pattern. Consider `--exclude-test REINDEX` if you use concurrent reindex.
+There is no safe alternative — any `REINDEX` statement triggers a warning because the linter cannot distinguish `REINDEX TABLE` from `REINDEX INDEX CONCURRENTLY`. Use `--exclude-test REINDEX` if you use concurrent reindex.
 
 ## CI Integration
 

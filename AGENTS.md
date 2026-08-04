@@ -16,8 +16,9 @@ make test-cov     # tests with coverage report
 ## Project Structure
 
 - `source/alembic_migration_linter/` — the package (8 modules: cli, linter, loader, generator, cache, config)
-- `source/tests/` — unit tests + functional tests with 25 scenario directories under `test_migrations/`
-- `docs/` — ARCHITECTURE.md (data flow, module reference) and GUIDE.md (user-facing)
+- `source/tests/` — unit tests + functional tests with scenario directories under `test_migrations/`
+- `source/README.md` — user-facing docs (installation, configuration, CI, safe migration patterns)
+- `docs/` — ARCHITECTURE.md (data flow, module reference)
 
 ## Toolchain
 

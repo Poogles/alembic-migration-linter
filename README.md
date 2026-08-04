@@ -70,7 +70,7 @@ Every phase of development must pass `make check` before merging.
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — data flow, module reference, design decisions, licensing
-- [User Guide](docs/GUIDE.md) — installation, configuration, CI integration, safe migration patterns
+- [User Guide](source/README.md) — installation, configuration, CI integration, safe migration patterns
 
 ## License
 

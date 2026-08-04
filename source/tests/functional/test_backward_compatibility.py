@@ -53,3 +53,7 @@ def test_safe_scenarios(
         f"Scenario {scenario_name}: expected no errors, "
         f"got {[e.code for e in result.errors]}"
     )
+    assert result.warnings == [], (
+        f"Scenario {scenario_name}: expected no warnings, "
+        f"got {[w.code for w in result.warnings]}"
+    )
