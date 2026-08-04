@@ -68,3 +68,20 @@ def test_conn_execute_scalar_does_not_crash(tmp_path: Path) -> None:
     assert result.skipped is False
     # The SELECT and UPDATE statements should have been captured and analyzed
     assert result.errors == []
+
+
+def test_conn_inspect_does_not_crash(tmp_path: Path) -> None:
+    """Migrations that call sa.inspect(conn) should not crash the linter.
+
+    In offline rendering mode, conn is a MockConnection and sa.inspect() raises
+    NoInspectionAvailable. The linter should gracefully handle this and still
+    capture any SQL that was rendered before the failure.
+    """
+    linter = _lint_scenario("conn_inspect", tmp_path)
+    results = linter.lint_all()
+
+    assert len(results) == 1
+    result: LintResult = results[0]
+    assert result.skipped is False
+    # The CREATE TABLE should have been captured before sa.inspect() failed
+    assert result.errors == []

@@ -8,6 +8,7 @@ from alembic.config import Config
 from alembic.operations import Operations
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory
+from sqlalchemy.exc import NoInspectionAvailable
 
 from .loader import AlembicMigration
 
@@ -49,13 +50,13 @@ class AlembicSqlGenerator:
         )
 
         mc = env_ctx.get_context()
-        # In offline mode, conn.execute() returns None, so calls like
-        # .scalar() or .fetchone() raise AttributeError. Suppress to still
-        # capture any SQL rendered before the failure.
+        # In offline mode, conn.execute() returns None (AttributeError on
+        # .scalar()), and sa.inspect(conn) raises NoInspectionAvailable.
+        # Suppress both so we still capture any SQL rendered before the failure.
         with (
             mc.begin_transaction(),
             Operations.context(mc),
-            contextlib.suppress(AttributeError),
+            contextlib.suppress(AttributeError, NoInspectionAvailable),
         ):
             fn()
 
