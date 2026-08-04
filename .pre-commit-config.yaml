@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.1
+    hooks:
+      - id: pyupgrade
+        args: [--py311-plus]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - alembic>=1.13
+          - sqlalchemy>=2.0
+          - click>=8.0
+          - django-migration-linter>=5.0
+          - types-click
+        args: [--config-file=source/pyproject.toml]
+        exclude: |
+          (?x)^(
+            source/tests/.*
+          )
