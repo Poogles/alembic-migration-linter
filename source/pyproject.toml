@@ -47,11 +47,13 @@ django-migration-linter = ">=5.0"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=8.0"
-pytest-cov = "*"
-testcontainers = "*"
+mypy = "*"
 psycopg2-binary = "*"
 pymysql = "*"
+pytest = ">=8.0"
+pytest-cov = "*"
+ruff = "*"
+testcontainers = "*"
 
 [tool.poetry.scripts]
 alembic-lint = "alembic_migration_linter.cli:main"
