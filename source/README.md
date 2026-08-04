@@ -142,9 +142,94 @@ These are modifications to the base rules, not separate codes. If `batch_alter_t
 
 ## Safe Migration Patterns
 
-### Adding a NOT NULL Column
+Each incompatibility rule has a safe alternative. The pattern is expand/contract: first expand the schema without breaking old code, deploy, then contract in a follow-up migration.
 
-Two-step approach — add nullable first, then add default and set NOT NULL:
+### DROP_TABLE
+
+Create the replacement table alongside the old one. After deploying code that uses the new table, drop the old table in a separate migration:
+
+```python
+# Migration 1: create replacement table
+def upgrade():
+    op.create_table(
+        "users_v2",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("name", sa.String(255), nullable=False),
+    )
+
+# Migration 2 (after code deploy): drop old table
+def upgrade():
+    op.drop_table("users")
+```
+
+### DROP_COLUMN
+
+Stop writing to the column in code first. In a later migration, drop it after old code is fully retired:
+
+```python
+# Migration 1: add replacement column, backfill data
+def upgrade():
+    op.add_column("users", sa.Column("full_name", sa.String(255)))
+    op.execute("UPDATE users SET full_name = name")
+
+# Migration 2 (after code deploy): drop old column
+def upgrade():
+    op.drop_column("users", "name")
+```
+
+### RENAME_TABLE
+
+Create the new table, copy data, switch code, then drop the old table:
+
+```python
+# Migration 1: create new table alongside old
+def upgrade():
+    op.create_table(
+        "products",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("sku", sa.String(50), nullable=False),
+    )
+    # Copy data from old table
+    op.execute("INSERT INTO products (id, sku) SELECT id, sku FROM items")
+
+# Migration 2 (after code deploy): drop old table
+def upgrade():
+    op.drop_table("items")
+```
+
+### RENAME_COLUMN
+
+Add a new column with the desired name, backfill, switch code, then drop the old column:
+
+```python
+# Migration 1: add new column and backfill
+def upgrade():
+    op.add_column("users", sa.Column("name", sa.String(255)))
+    op.execute("UPDATE users SET name = title")
+
+# Migration 2 (after code deploy): drop old column
+def upgrade():
+    op.drop_column("users", "title")
+```
+
+### ALTER_COLUMN
+
+Add a new column with the desired type, backfill, switch code, then drop the old column:
+
+```python
+# Migration 1: add new column with target type
+def upgrade():
+    op.add_column("products", sa.Column("description_long", sa.Text()))
+    op.execute("UPDATE products SET description_long = description")
+
+# Migration 2 (after code deploy): drop old column
+def upgrade():
+    op.drop_column("products", "description")
+```
+
+### NOT_NULL
+
+Two-step approach — add nullable first, then backfill and add NOT NULL with a default:
 
 ```python
 # Migration 1: add nullable column
@@ -157,12 +242,12 @@ def upgrade():
     op.alter_column("users", "status", nullable=False, server_default="active")
 ```
 
-### Adding a Unique Constraint
+### ADD_UNIQUE
 
 Ensure no duplicates exist before adding the constraint:
 
 ```python
-# Migration 1: add index (non-unique) and backfill
+# Migration 1: add non-unique index and deduplicate
 def upgrade():
     op.create_index("idx_users_email", "users", ["email"])
     # Run a data migration to deduplicate
@@ -172,14 +257,48 @@ def upgrade():
     op.create_unique_constraint("uq_users_email", "users", ["email"])
 ```
 
-### Creating an Index (PostgreSQL)
+### CREATE_INDEX (PostgreSQL)
 
-Use raw SQL with `CONCURRENTLY`:
+Use `CONCURRENTLY` to avoid locking the table during creation:
 
 ```python
 def upgrade():
     op.execute("CREATE INDEX CONCURRENTLY idx_users_email ON users (email)")
 ```
+
+### CREATE_INDEX_EXCLUSIVE (PostgreSQL)
+
+Don't combine `ALTER TABLE` and `CREATE INDEX` in the same migration. Split into separate migrations:
+
+```python
+# Migration 1: alter table
+def upgrade():
+    op.add_column("products", sa.Column("category", sa.String(100)))
+
+# Migration 2: create index
+def upgrade():
+    op.execute("CREATE INDEX CONCURRENTLY idx_products_category ON products (category)")
+```
+
+### DROP_INDEX (PostgreSQL)
+
+Use `CONCURRENTLY` to avoid locking the table during drop:
+
+```python
+def upgrade():
+    op.execute("DROP INDEX CONCURRENTLY idx_users_email")
+```
+
+### REINDEX (PostgreSQL)
+
+Use `REINDEX INDEX CONCURRENTLY` for individual indexes instead of `REINDEX TABLE`:
+
+```python
+def upgrade():
+    op.execute("REINDEX INDEX CONCURRENTLY idx_users_email")
+```
+
+**Note:** The linter cannot distinguish `REINDEX TABLE` from `REINDEX INDEX CONCURRENTLY` — both match the `REINDEX` pattern. Consider `--exclude-test REINDEX` if you use concurrent reindex.
 
 ## CI Integration
 

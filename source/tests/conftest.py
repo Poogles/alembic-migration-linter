@@ -113,6 +113,12 @@ SAFE_SCENARIOS: dict[str, tuple[list[str], list[str]]] = {
     "add_server_default": ([], []),
     "run_python_no_reverse": ([], []),
     "run_sql_no_reverse": ([], []),
+    "safe_add_table": ([], []),
+    "safe_add_column": ([], []),
+    "safe_add_column_rename": ([], []),
+    "safe_add_column_alter": ([], []),
+    "safe_create_index_concurrently": ([], []),
+    "safe_drop_index_concurrently": ([], []),
 }
 
 WARNING_SCENARIOS: dict[str, tuple[list[str], list[str]]] = {
